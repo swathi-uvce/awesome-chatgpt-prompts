@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-lg markdown-body">
+  <div class="admin-section">
+    <h2>Add New Prompt</h2>
+    
+    <form id="addPromptForm" class="admin-form">
+      <div class="form-group">
+        <label for="act">Prompt Title/Role:</label>
+        <input type="text" id="act" name="act" required placeholder="e.g., Python Developer">
+      </div>
+      
+      <div class="form-group">
+        <label for="prompt">Prompt Text:</label>
+        <textarea id="prompt" name="prompt" required rows="6" placeholder="Enter the full prompt text..."></textarea>
+      </div>
+      
+      <div class="form-group">
+        <label>
+          <input type="checkbox" id="for_devs" name="for_devs">
+          Developer-focused prompt
+        </label>
+      </div>
+      
+      <button type="submit" class="submit-btn">Add Prompt</button>
+    </form>
+    
+    <div id="message" class="message"></div>
+  </div>
+</div>
+
+<script>
+document.getElementById('addPromptForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  
+  const formData = {
+    act: document.getElementById('act').value,
+    prompt: document.getElementById('prompt').value,
+    for_devs: document.getElementById('for_devs').checked
+  };
+  
+  try {
+    const response = await fetch('/api/add-prompt', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(formData)
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      document.getElementById('message').innerHTML = 
+        `<div class="success">✅ ${result.message}. Total prompts: ${result.total_prompts}</div>`;
+      document.getElementById('addPromptForm').reset();
+    } else {
+      document.getElementById('message').innerHTML = 
+        `<div class="error">❌ Error: ${result.error}</div>`;
+    }
+  } catch (error) {
+    document.getElementById('message').innerHTML = 
+      `<div class="error">❌ Error: ${error.message}</div>`;
+  }
+});
+</script>
+{% endblock %}

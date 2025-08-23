@@ -49,6 +49,13 @@ def parse_markdown_content(content):
     md = markdown.Markdown(extensions=['extra', 'codehilite'])
     return md.convert(content)
 
+def append_prompt_to_csv(act, prompt, for_devs=False):
+    """Append a new prompt to the CSV file"""
+    csv_path = Path('prompts.csv')
+    with open(csv_path, 'a', newline='', encoding='utf-8') as file:
+        writer = csv.writer(file)
+        writer.writerow([act, prompt, str(for_devs).upper()])
+
 @app.route('/')
 def index():
     """Main page route"""
@@ -127,6 +134,39 @@ def api_github_stars():
     return jsonify({
         'stargazers_count': 129000
     })
+
+@app.route('/api/add-prompt', methods=['POST'])
+def add_prompt():
+    """API endpoint to add a new prompt"""
+    try:
+        data = request.get_json()
+        act = data.get('act')
+        prompt = data.get('prompt')
+        for_devs = data.get('for_devs', False)
+        
+        if not act or not prompt:
+            return jsonify({'error': 'Missing required fields'}), 400
+        
+        # Add to CSV
+        append_prompt_to_csv(act, prompt, for_devs)
+        
+        # Reload prompts data
+        load_prompts()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Prompt added successfully',
+            'total_prompts': len(prompts_data)
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/admin')
+def admin():
+    """Admin page for adding prompts"""
+    return render_template('admin.html',
+                         title="Admin - Add Prompts",
+                         subtitle="Add new prompts to the collection")
 
 # Static file routes for non-static folder files
 @app.route('/<path:filename>')
