@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-lg markdown-body">
+  <!-- Search and Filter Section -->
+  <div class="search-section">
+    <div class="search-header">
+      <div class="search-controls">
+        <div class="search-input-wrapper">
+          <input type="text" id="searchInput" placeholder="Search prompts..." class="search-input">
+          <div id="searchResults" class="search-results"></div>
+        </div>
+        <!-- Audience selector moved to base template with language and tone selectors -->
+      </div>
+      <div class="prompt-count" id="promptCount">
+        <span class="count-label">All Prompts</span>
+        <span class="count-number">{{ total_prompts }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Prompts Grid -->
+  <div class="prompts-grid">
+    <!-- Contribute Card -->
+    <div class="prompt-card contribute-card">
+      <a href="https://github.com/f/awesome-chatgpt-prompts/pulls" target="_blank" style="text-decoration: none; color: inherit; height: 100%; display: flex; flex-direction: column;">
+        <div class="prompt-title" style="display: flex; align-items: center; gap: 8px;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="16"></line>
+            <line x1="8" y1="12" x2="16" y2="12"></line>
+          </svg>
+          Add Your Prompt
+        </div>
+        <p class="prompt-content" style="flex-grow: 1;">
+          Share your creative prompts with the community! Submit a pull request to add your prompts to the collection.
+        </p>
+        <span class="contributor-badge">Contribute Now</span>
+      </a>
+    </div>
+
+    <!-- Prompt Cards -->
+    {% for prompt in prompts %}
+    <div class="prompt-card" {% if prompt.for_devs %}data-dev="true"{% endif %}>
+      <div class="prompt-title">
+        {{ prompt.act }}
+        <div class="action-buttons">
+          <button class="chat-button" title="Open in AI Chat" onclick="openInChat(this, '{{ prompt.prompt | replace("'", "\\'") | replace("\n", "\\n") }}')">
+            <svg class="chat-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+            <svg class="terminal-icon" style="display: none;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="4 17 10 11 4 5"></polyline>
+              <line x1="12" y1="19" x2="20" y2="19"></line>
+            </svg>
+          </button>
+          <button class="yaml-button" title="Show prompt.yml format" onclick="showYamlModal(event, '{{ prompt.act | replace("'", "\\'") }}', '{{ prompt.prompt | replace("'", "\\'") | replace("\n", "\\n") }}')">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+          </button>
+          <button class="copy-button" title="Copy prompt" onclick="copyPrompt(this, '{{ prompt.prompt | replace("'", "\\'") | replace("\n", "\\n") }}')">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <p class="prompt-content">{{ prompt.prompt | truncate(200) }}</p>
+      <a href="https://github.com/f" class="contributor-badge" target="_blank" rel="noopener">@f</a>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Modal for prompt details -->
+<div class="modal-overlay" id="modalOverlay" style="display: none;">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title"></h2>
+      <div class="modal-actions">
+        <button class="modal-copy-button" title="Copy prompt" onclick="copyModalPrompt()">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+        </button>
+        <button class="modal-close" title="Close" onclick="hideModal()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+    <div class="modal-content"></div>
+    <div class="modal-footer">
+      <div class="modal-footer-left">
+        <a class="modal-contributor" target="_blank" rel="noopener"></a>
+      </div>
+      <div class="modal-footer-right">
+        <button class="modal-chat-button" onclick="openModalChat()">
+          <svg class="chat-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          </svg>
+          <svg class="terminal-icon" style="display: none;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="4 17 10 11 4 5"></polyline>
+            <line x1="12" y1="19" x2="20" y2="19"></line>
+          </svg>
+          Start Chat
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
