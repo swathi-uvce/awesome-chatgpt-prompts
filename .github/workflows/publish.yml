@@ -11,22 +11,20 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
-          ruby-version: "3.2"
-          bundler-cache: true
+          python-version: '3.11'
 
-      - name: Install dependencies
+      - name: Install Python dependencies
         run: |
-          bundle config set --local deployment 'false'
-          bundle config set --local path 'vendor/bundle'
-          bundle install --jobs 4 --retry 3
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
-      - name: Build site
-        run: bundle exec jekyll build
+      - name: Build static site
+        run: python build.py
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
