@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Admin - Add Prompts — awesome AI prompts</title>
+    <meta name="description" content="Add new prompts to the collection">
+
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    
+  </head>
+  <body class="">
+    <div class="layout-wrapper">
+      <!-- Copilot Suggestion Modal Backdrop -->
+      <div class="copilot-suggestion-backdrop"></div>
+      <!-- Copilot Suggestion Modal -->
+      <div class="copilot-suggestion-modal" id="copilotSuggestionModal">
+        <div class="copilot-suggestion-content">
+          GitHub Copilot may work better with developer mode. Would you like to switch to GitHub Copilot?
+        </div>
+        <div class="copilot-suggestion-actions">
+          <div class="copilot-suggestion-buttons">
+            <button class="copilot-suggestion-button secondary" onclick="hideCopilotSuggestion(false)">No, thanks</button>
+            <button class="copilot-suggestion-button primary" onclick="hideCopilotSuggestion(true)">Switch to GitHub Copilot</button>
+          </div>
+          <label class="copilot-suggestion-checkbox">
+            <input type="checkbox" id="doNotShowAgain">
+            Don't show again
+          </label>
+        </div>
+      </div>
+      <header class="site-header">
+        <div class="header-left">
+          <h1 class="site-title">Admin - Add Prompts</h1>
+          <p class="site-slogan">Add new prompts to the collection</p>
+          <div class="site-description">
+            <p class="platform-hint">Choose your AI platform</p>
+            <div class="platform-pills">
+              <button class="platform-tag" data-platform="github-copilot" data-url="https://github.com/copilot">GitHub Copilot</button>
+              <button class="platform-tag" data-platform="chatgpt" data-url="https://chat.openai.com">ChatGPT</button>
+              <div class="platform-tag-container">
+                <button class="platform-tag" data-platform="grok" data-url="https://grok.com/chat?reasoningMode=none">Grok</button>
+                <div class="grok-mode-dropdown" style="display: none;">
+                  <div class="grok-mode-option" data-url="https://grok.com/chat?reasoningMode=none">Grok</div>
+                  <div class="grok-mode-option" data-url="https://grok.com/chat?reasoningMode=deepsearch">Grok Deep Search</div>
+                  <div class="grok-mode-option" data-url="https://grok.com/chat?reasoningMode=think">Grok Thinking</div>
+                </div>
+              </div>
+              <button class="platform-tag" data-platform="claude" data-url="https://claude.ai/new">Claude</button>
+              <button class="platform-tag" data-platform="perplexity" data-url="https://perplexity.ai">Perplexity</button>
+              <button class="platform-tag" data-platform="mistral" data-url="https://chat.mistral.ai/chat">Mistral</button>
+              <button class="platform-tag" data-platform="gemini" data-url="https://gemini.google.com">Gemini</button>
+              <button class="platform-tag" data-platform="llama" data-url="https://meta.ai">Meta</button>
+            </div>
+            
+            <!-- Language, Tone, and Audience Selectors -->
+            <div class="response-controls">
+              <span class="response-text">Reply in</span>
+              <select id="languageSelect" class="response-select">
+                <option value="english">English</option>
+                <option value="spanish">Spanish</option>
+                <option value="french">French</option>
+                <option value="german">German</option>
+                <option value="italian">Italian</option>
+                <option value="portuguese">Portuguese</option>
+                <option value="russian">Russian</option>
+                <option value="chinese">Chinese</option>
+                <option value="japanese">Japanese</option>
+                <option value="korean">Korean</option>
+                <option value="arabic">Arabic</option>
+                <option value="hindi">Hindi</option>
+                <option value="custom">Custom...</option>
+              </select>
+              
+              <span class="response-text">using</span>
+              <select id="toneSelect" class="response-select">
+                <option value="professional">professional</option>
+                <option value="casual">casual</option>
+                <option value="friendly">friendly</option>
+                <option value="formal">formal</option>
+                <option value="creative">creative</option>
+                <option value="technical">technical</option>
+                <option value="humorous">humorous</option>
+                <option value="empathetic">empathetic</option>
+                <option value="authoritative">authoritative</option>
+                <option value="custom">custom...</option>
+              </select>
+              
+              <span class="response-text">tone, for</span>
+              <select id="audienceSelect" class="response-select">
+                <option value="everyone">everyone</option>
+                <option value="developers">developers</option>
+                <option value="beginners">beginners</option>
+                <option value="experts">experts</option>
+                <option value="children">children</option>
+                <option value="academics">academics</option>
+                <option value="business">business</option>
+                <option value="custom">custom...</option>
+              </select>
+            </div>
+            
+            <!-- Custom input fields (hidden by default) -->
+            <div id="customInputs" class="custom-inputs" style="display: none;">
+              <input type="text" id="customLanguage" placeholder="Enter custom language" class="custom-input">
+              <input type="text" id="customTone" placeholder="Enter custom tone" class="custom-input">
+              <input type="text" id="customAudience" placeholder="Enter custom audience" class="custom-input">
+            </div>
+          </div>
+        </div>
+        <div class="header-right">
+          <a href="https://prompts.chat/" target="_blank" class="original-site-link" title="Visit Original Site">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+            </svg>
+            <span>prompts.chat</span>
+          </a>
+          <a href="https://github.com/f/awesome-chatgpt-prompts/stargazers" target="_blank" class="star-count">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+            </svg>
+            <span id="starCount">...</span>
+          </a>
+          <a href="https://chromewebstore.google.com/detail/promptschat/eemdohkhbaifiocagjlhibfbhamlbeej" target="_blank" class="chrome-ext-link">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <circle cx="12" cy="12" r="4"></circle>
+              <line x1="21.17" y1="8" x2="12" y2="8"></line>
+              <line x1="3.95" y1="6.06" x2="8.54" y2="14"></line>
+              <line x1="10.88" y1="21.94" x2="15.46" y2="14"></line>
+            </svg>
+          </a>
+          <button class="dark-mode-toggle" onclick="toggleDarkMode()" title="Toggle dark mode">
+            <svg class="mode-icon sun-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="18.36"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+            <svg class="mode-icon moon-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+          </button>
+        </div>
+      </header>
+
+      <div class="content-wrapper">
+        
+<div class="container-lg markdown-body">
+  <div class="admin-section">
+    <h2>Add New Prompt</h2>
+    
+    <form id="addPromptForm" class="admin-form">
+      <div class="form-group">
+        <label for="act">Prompt Title/Role:</label>
+        <input type="text" id="act" name="act" required placeholder="e.g., Python Developer">
+      </div>
+      
+      <div class="form-group">
+        <label for="prompt">Prompt Text:</label>
+        <textarea id="prompt" name="prompt" required rows="6" placeholder="Enter the full prompt text..."></textarea>
+      </div>
+      
+      <div class="form-group">
+        <label>
+          <input type="checkbox" id="for_devs" name="for_devs">
+          Developer-focused prompt
+        </label>
+      </div>
+      
+      <button type="submit" class="submit-btn">Add Prompt</button>
+    </form>
+    
+    <div id="message" class="message"></div>
+  </div>
+</div>
+
+<script>
+document.getElementById('addPromptForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  
+  const formData = {
+    act: document.getElementById('act').value,
+    prompt: document.getElementById('prompt').value,
+    for_devs: document.getElementById('for_devs').checked
+  };
+  
+  try {
+    const response = await fetch('/api/add-prompt', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(formData)
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      document.getElementById('message').innerHTML = 
+        `<div class="success">✅ ${result.message}. Total prompts: ${result.total_prompts}</div>`;
+      document.getElementById('addPromptForm').reset();
+    } else {
+      document.getElementById('message').innerHTML = 
+        `<div class="error">❌ Error: ${result.error}</div>`;
+    }
+  } catch (error) {
+    document.getElementById('message').innerHTML = 
+      `<div class="error">❌ Error: ${error.message}</div>`;
+  }
+});
+</script>
+
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+    
+  </body>
+</html>

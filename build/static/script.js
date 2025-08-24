@@ -197,7 +197,120 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Initialize language and tone selectors
   initializeLanguageAndTone();
+  
+  // Initialize template modal event listeners
+  initializeTemplateModal();
 });
+
+// Initialize template modal event listeners
+function initializeTemplateModal() {
+  const modalOverlay = document.getElementById("modalOverlay");
+  if (modalOverlay) {
+    // Add click event to close modal when clicking overlay
+    modalOverlay.addEventListener("click", (e) => {
+      if (e.target === modalOverlay) {
+        hideModal();
+      }
+    });
+    
+    console.log("Template modal event listeners initialized");
+  }
+}
+
+// Language, Tone, and Audience Selector Functionality
+function initializeLanguageAndTone() {
+  const languageSelect = document.getElementById('languageSelect');
+  const toneSelect = document.getElementById('toneSelect');
+  const audienceSelect = document.getElementById('audienceSelect');
+  const customInputs = document.getElementById('customInputs');
+  const customLanguage = document.getElementById('customLanguage');
+  const customTone = document.getElementById('customTone');
+  const customAudience = document.getElementById('customAudience');
+
+  // Load saved preferences from localStorage
+  const savedLanguage = localStorage.getItem('selectedLanguage') || 'english';
+  const savedTone = localStorage.getItem('selectedTone') || 'professional';
+  const savedAudience = localStorage.getItem('audience') || 'everyone';
+
+  // Set initial values
+  languageSelect.value = savedLanguage;
+  toneSelect.value = savedTone;
+  audienceSelect.value = savedAudience;
+
+  // Handle language selection
+  languageSelect.addEventListener('change', (e) => {
+    const value = e.target.value;
+    localStorage.setItem('selectedLanguage', value);
+    
+    if (value === 'custom') {
+      customLanguage.style.display = 'block';
+      customLanguage.focus();
+    } else {
+      customLanguage.style.display = 'none';
+    }
+  });
+
+  // Handle tone selection
+  toneSelect.addEventListener('change', (e) => {
+    const value = e.target.value;
+    localStorage.setItem('selectedTone', value);
+    
+    if (value === 'custom') {
+      customTone.style.display = 'block';
+      customTone.focus();
+    } else {
+      customTone.style.display = 'none';
+    }
+  });
+
+  // Handle audience selection
+  audienceSelect.addEventListener('change', (e) => {
+    const value = e.target.value;
+    localStorage.setItem('audience', value);
+    
+    if (value === 'custom') {
+      customAudience.style.display = 'block';
+      customAudience.focus();
+    } else {
+      customAudience.style.display = 'none';
+    }
+    
+    // Update dev mode class for existing functionality
+    document.body.classList.toggle('dev-mode', value === 'developers');
+    
+    // Trigger prompt filtering
+    filterPrompts();
+  });
+
+  // Handle custom input changes
+  customLanguage.addEventListener('input', (e) => {
+    localStorage.setItem('customLanguage', e.target.value);
+  });
+
+  customTone.addEventListener('input', (e) => {
+    localStorage.setItem('customTone', e.target.value);
+  });
+
+  customAudience.addEventListener('input', (e) => {
+    localStorage.setItem('customAudience', e.target.value);
+  });
+
+  // Show/hide custom inputs based on initial values
+  if (savedLanguage === 'custom') {
+    customLanguage.style.display = 'block';
+    customLanguage.value = localStorage.getItem('customLanguage') || '';
+  }
+  
+  if (savedTone === 'custom') {
+    customTone.style.display = 'block';
+    customTone.value = localStorage.getItem('customTone') || '';
+  }
+  
+  if (savedAudience === 'custom') {
+    customAudience.style.display = 'block';
+    customAudience.value = localStorage.getItem('customAudience') || '';
+  }
+}
 
 // Search functionality
 async function initializeSearch() {
@@ -210,9 +323,8 @@ async function initializeSearch() {
     prompts.sort((a, b) => a.act.localeCompare(b.act));
 
     const searchInput = document.getElementById("searchInput");
-    const searchResults = document.getElementById("searchResults");
     const promptCount = document.getElementById("promptCount");
-    const isDevMode = document.getElementById("audienceSelect").value === "developers";
+    const isDevMode = document.getElementById("audienceSelect")?.value === "developers";
 
     // Update prompt count
     const totalPrompts = isDevMode
@@ -220,32 +332,31 @@ async function initializeSearch() {
       : prompts.length;
     updatePromptCount(totalPrompts, totalPrompts);
 
-    // Show filtered prompts initially
-    const filteredPrompts = isDevMode
-      ? prompts.filter((p) => p.for_devs === true)
-      : prompts;
-    displaySearchResults(filteredPrompts);
-
+    // Initialize search input event listener
     searchInput.addEventListener("input", (e) => {
       const searchTerm = e.target.value.toLowerCase();
-      const isDevMode = document.getElementById("audienceSelect").value === "developers";
+      const isDevMode = document.getElementById("audienceSelect")?.value === "developers";
 
-      const filteredPrompts = prompts.filter((prompt) => {
-        const matchesSearch =
-          prompt.act.toLowerCase().includes(searchTerm) ||
-          prompt.prompt.toLowerCase().includes(searchTerm);
-
-        return isDevMode
-          ? matchesSearch && prompt.for_devs === true
-          : matchesSearch;
+      // Filter existing prompt cards instead of creating new ones
+      const promptCards = document.querySelectorAll(".prompt-card:not(.contribute-card)");
+      
+      promptCards.forEach(card => {
+        const title = card.querySelector(".prompt-title")?.textContent?.toLowerCase() || "";
+        const content = card.querySelector(".prompt-content")?.textContent?.toLowerCase() || "";
+        
+        const matchesSearch = !searchTerm || 
+          title.includes(searchTerm) || 
+          content.includes(searchTerm);
+        
+        const isDevCard = card.hasAttribute("data-dev");
+        const shouldShow = matchesSearch && (!isDevMode || isDevCard);
+        
+        card.style.display = shouldShow ? "block" : "none";
       });
 
       // Update count with filtered results
-      const totalPrompts = isDevMode
-        ? prompts.filter((p) => p.for_devs === true).length
-        : prompts.length;
-      updatePromptCount(filteredPrompts.length, totalPrompts);
-      displaySearchResults(filteredPrompts);
+      const visibleCards = document.querySelectorAll(".prompt-card:not(.contribute-card)[style*='block']");
+      updatePromptCount(visibleCards.length, totalPrompts);
     });
   } catch (error) {
     console.error("Error loading prompts:", error);
@@ -298,369 +409,89 @@ function parseCSV(csv) {
     .filter((entry) => entry.act && entry.prompt);
 }
 
-function displaySearchResults(results) {
-  const searchResults = document.getElementById("searchResults");
-  const searchInput = document.getElementById("searchInput");
-  const isDevMode = document.getElementById("audienceSelect").value === "developers";
-
-  // Filter results based on dev mode
-  if (isDevMode) {
-    results = results.filter((result) => result.for_devs === true);
-  }
-
-  searchResults.innerHTML = "";
-
-  if (window.innerWidth <= 768 && !searchInput.value.trim()) {
-    return;
-  }
-
-  if (results.length === 0) {
-    const li = document.createElement("li");
-    li.className = "search-result-item add-prompt";
-    li.innerHTML = `
-    <a href="https://github.com/swathi-uvce/awesome-chatgpt-prompts/pulls" target="_blank" style="text-decoration: none; color: inherit; display: flex; align-items: center; gap: 8px;">
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="10"></circle>
-        <line x1="12" y1="8" x2="12" y2="16"></line>
-        <line x1="8" y1="12" x2="16" y2="12"></line>
-        </svg>
-        Add this prompt
-    </a>
-    `;
-    searchResults.appendChild(li);
-    return;
-  }
-
-  results.forEach((result) => {
-    const li = document.createElement("li");
-    li.className = "search-result-item";
-    li.textContent = result.act;
-    li.addEventListener("click", () => {
-      // Find the prompt card with matching title
-      const cards = document.querySelectorAll(".prompt-card");
-      const targetCard = Array.from(cards).find((card) => {
-        const cardTitle = card
-          .querySelector(".prompt-title")
-          .textContent.replace(/\s+/g, " ") // Normalize whitespace
-          .replace(/[\n\r]/g, "") // Remove newlines
-          .trim();
-
-        const searchTitle = result.act
-          .replace(/\s+/g, " ") // Normalize whitespace
-          .replace(/[\n\r]/g, "") // Remove newlines
-          .trim();
-
-        return (
-          cardTitle.toLowerCase().includes(searchTitle.toLowerCase()) ||
-          searchTitle.toLowerCase().includes(cardTitle.toLowerCase())
-        );
-      });
-
-      if (targetCard) {
-        // Remove highlight from all cards
-        cards.forEach((card) => {
-          card.style.transition = "all 0.3s ease";
-          card.style.transform = "none";
-          card.style.boxShadow = "none";
-          card.style.borderColor = "";
-        });
-
-        // Different scroll behavior for mobile and desktop
-        const isMobile = window.innerWidth <= 768;
-        const headerHeight =
-          document.querySelector(".site-header").offsetHeight;
-
-        if (isMobile) {
-          // On mobile, scroll the window
-          const cardRect = targetCard.getBoundingClientRect();
-          const scrollTop =
-            window.pageYOffset + cardRect.top - headerHeight - 50;
-
-          window.scrollTo({
-            top: scrollTop,
-            behavior: "smooth",
-          });
-        } else {
-          // On desktop, scroll the main-content container
-          const mainContent = document.querySelector(".main-content");
-          const cardRect = targetCard.getBoundingClientRect();
-          const scrollTop =
-            mainContent.scrollTop + cardRect.top - headerHeight - 50;
-
-          mainContent.scrollTo({
-            top: scrollTop,
-            behavior: "smooth",
-          });
-        }
-
-        // Add highlight effect after scrolling completes
-        setTimeout(() => {
-          targetCard.style.transform = "scale(1.02)";
-          targetCard.style.boxShadow = "0 0 0 2px var(--accent-color)";
-          targetCard.style.borderColor = "var(--accent-color)";
-
-          // Remove highlight after animation
-          setTimeout(() => {
-            targetCard.style.transform = "none";
-            targetCard.style.boxShadow = "none";
-            targetCard.style.borderColor = "";
-          }, 2000);
-        }, 500); // Wait for scroll to complete
-      } else {
-        console.log("Card not found for:", result.act);
-      }
-    });
-    searchResults.appendChild(li);
-  });
-}
-
-// Function to filter prompts based on dev mode
+// Function to filter prompts based on audience selection
 function filterPrompts() {
-  const isDevMode = document.getElementById("audienceSelect").value === "developers";
-  const searchInput = document.getElementById("searchInput");
-  const searchTerm = searchInput.value.toLowerCase();
-
-  // Re-fetch and filter prompts
-  fetch("/prompts.csv")
-    .then((response) => response.text())
-    .then((csvText) => {
-      const prompts = parseCSV(csvText);
-      const filteredPrompts = prompts.filter((prompt) => {
-        const matchesSearch =
-          !searchTerm ||
-          prompt.act.toLowerCase().includes(searchTerm) ||
-          prompt.prompt.toLowerCase().includes(searchTerm);
-
-        return isDevMode
-          ? matchesSearch && prompt.for_devs === true
-          : matchesSearch;
-      });
-
-      // Update count with filtered results
-      updatePromptCount(
-        filteredPrompts.length,
-        isDevMode
-          ? prompts.filter((p) => p.for_devs === true).length
-          : prompts.length
-      );
-      displaySearchResults(filteredPrompts);
-
-      // Update prompt cards visibility
-      const promptsGrid = document.querySelector(".prompts-grid");
-      if (promptsGrid) {
-        const cards = promptsGrid.querySelectorAll(
-          ".prompt-card:not(.contribute-card)"
-        );
-        cards.forEach((card) => {
-          const title = card.querySelector(".prompt-title").textContent.trim();
-          const matchingPrompt = prompts.find((p) => {
-            const pTitle = p.act
-              .replace(/\s+/g, " ")
-              .replace(/[\n\r]/g, "")
-              .trim();
-            const cardTitle = title
-              .replace(/\s+/g, " ")
-              .replace(/[\n\r]/g, "")
-              .trim();
-            return (
-              pTitle.toLowerCase() === cardTitle.toLowerCase() ||
-              pTitle.toLowerCase().includes(cardTitle.toLowerCase()) ||
-              cardTitle.toLowerCase().includes(pTitle.toLowerCase())
-            );
-          });
-
-          // Show card if not in dev mode or if it's a dev prompt in dev mode
-          card.style.display =
-            !isDevMode || (matchingPrompt && matchingPrompt.for_devs === true)
-              ? ""
-              : "none";
-        });
+  const isDevMode = document.getElementById("audienceSelect")?.value === "developers";
+  const promptCards = document.querySelectorAll(".prompt-card:not(.contribute-card)");
+  
+  promptCards.forEach(card => {
+    if (isDevMode) {
+      // In developer mode, only show cards with data-dev="true"
+      if (card.hasAttribute("data-dev")) {
+        card.style.display = "block";
+      } else {
+        card.style.display = "none";
       }
-    });
+    } else {
+      // In everyone mode, show all cards
+      card.style.display = "block";
+    }
+  });
+  
+  // Update prompt count
+  const visibleCards = document.querySelectorAll(".prompt-card:not(.contribute-card)[style*='block']");
+  const promptCount = document.getElementById("promptCount");
+  if (promptCount) {
+    const countNumber = promptCount.querySelector(".count-number");
+    if (countNumber) {
+      countNumber.textContent = visibleCards.length;
+    }
+  }
 }
 
 // Update the modal initialization and event listeners
 function createPromptCards() {
-  const container = document.querySelector(".container-lg.markdown-body");
-  const promptsGrid = document.createElement("div");
-  promptsGrid.className = "prompts-grid";
-
-  // Add contribute box
-  const contributeCard = document.createElement("div");
-  contributeCard.className = "prompt-card contribute-card";
-  contributeCard.innerHTML = `
-    <a href="https://github.com/swathi-uvce/awesome-chatgpt-prompts/pulls" target="_blank" style="text-decoration: none; color: inherit; height: 100%; display: flex; flex-direction: column;">
-    <div class="prompt-title" style="display: flex; align-items: center; gap: 8px;">
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="10"></circle>
-        <line x1="12" y1="8" x2="12" y2="16"></line>
-        <line x1="8" y1="12" x2="16" y2="12"></line>
-        </svg>
-        Add Your Prompt
-    </div>
-    <p class="prompt-content" style="flex-grow: 1;">
-        Share your creative prompts with the community! Submit a pull request to add your prompts to the collection.
-    </p>
-    <span class="contributor-badge">Contribute Now</span>
-    </a>
-`;
-  promptsGrid.appendChild(contributeCard);
-
-  // Fetch prompts.csv to get for_devs information
-  fetch("/prompts.csv")
-    .then((response) => response.text())
-    .then((csvText) => {
-      const prompts = parseCSV(csvText);
-      const isDevMode = document.getElementById("audienceSelect").value === "developers";
-
-      const promptElements = document.querySelectorAll(
-        "h2[id^=act] + p + blockquote"
-      );
-
-      promptElements.forEach((blockquote) => {
-        const title =
-          blockquote.previousElementSibling.previousElementSibling.textContent.trim();
-        const content = blockquote.textContent.trim();
-
-        // Find matching prompt in CSV
-        const matchingPrompt = prompts.find((p) => {
-          const csvTitle = p.act
-            .replace(/\s+/g, " ")
-            .replace(/[\n\r]/g, "")
-            .trim();
-          const elementTitle = title
-            .replace(/\s+/g, " ")
-            .replace(/[\n\r]/g, "")
-            .trim();
-          return (
-            csvTitle.toLowerCase() === elementTitle.toLowerCase() ||
-            csvTitle.toLowerCase().includes(elementTitle.toLowerCase()) ||
-            elementTitle.toLowerCase().includes(csvTitle.toLowerCase())
-          );
-        });
-
-        // Extract contributor from the paragraph element
-        const contributorParagraph = blockquote.previousElementSibling;
-        const contributorText = contributorParagraph.textContent;
-        let contributor = null;
-
-        // Try different contributor formats
-        const formats = [
-          /Contributed by: \[([^\]]+)\]/i,
-          /Contributed by \[([^\]]+)\]/i,
-          /Contributed by: @([^\s]+)/i,
-          /Contributed by @([^\s]+)/i,
-          /Contributed by: \[@([^\]]+)\]/i,
-          /Contributed by \[@([^\]]+)\]/i,
-        ];
-
-        for (const format of formats) {
-          const match = contributorText.match(format);
-          if (match) {
-            contributor = match[1];
-            // Remove @ if it exists at the start
-            contributor = contributor.replace(/^@/, "");
-            break;
-          }
+  // Since our Flask template already renders the prompt cards,
+  // we just need to initialize the existing cards with event listeners
+  // and ensure they're properly visible
+  
+  const existingCards = document.querySelectorAll(".prompt-card:not(.contribute-card)");
+  
+  if (existingCards.length > 0) {
+    // Cards already exist from Flask template, just ensure they're visible
+    existingCards.forEach(card => {
+      card.style.display = "block";
+      
+      // Add click event listener to open modal
+      card.addEventListener("click", (e) => {
+        console.log("Prompt card clicked:", e.target);
+        
+        // Don't open modal if clicking on buttons, links, or action buttons
+        if (e.target.closest('button') || 
+            e.target.closest('a') || 
+            e.target.closest('.contributor-badge') ||
+            e.target.closest('.action-buttons')) {
+          console.log("Click blocked - button/link/action-buttons clicked");
+          return;
         }
-
-        // Set default contributor to 'f' if none found
-        if (!contributor) {
-          contributor = "f";
+        
+        const title = card.querySelector(".prompt-title")?.textContent?.trim();
+        const content = card.querySelector(".prompt-content")?.textContent?.trim();
+        
+        console.log("Extracted title and content:", { title, content });
+        
+        if (title && content) {
+          console.log("Calling showModal...");
+          showModal(title, content);
+        } else {
+          console.log("Missing title or content");
         }
-
-        const card = document.createElement("div");
-        card.className = "prompt-card";
-
-        // Set initial visibility based on dev mode
-        if (isDevMode && (!matchingPrompt || !matchingPrompt.for_devs)) {
+      });
+      
+      // Add cursor pointer to indicate clickable
+      card.style.cursor = "pointer";
+    });
+    
+    // Update visibility based on current audience selection
+    const isDevMode = document.getElementById("audienceSelect")?.value === "developers";
+    if (isDevMode) {
+      existingCards.forEach(card => {
+        if (!card.hasAttribute("data-dev")) {
           card.style.display = "none";
         }
-
-        card.innerHTML = `
-        <div class="prompt-title">
-            ${title}
-            <div class="action-buttons">
-            <button class="chat-button" title="Open in AI Chat" onclick="openInChat(this, '${encodeURIComponent(
-              updatePromptPreview(content.trim())
-            )}')">
-                <svg class="chat-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                </svg>
-                <svg class="terminal-icon" style="display: none;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="4 17 10 11 4 5"></polyline>
-                <line x1="12" y1="19" x2="20" y2="19"></line>
-                </svg>
-            </button>
-            <button class="yaml-button" title="Show prompt.yml format" onclick="showYamlModal(event, '${encodeURIComponent(title)}', '${encodeURIComponent(content)}')">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                <polyline points="14 2 14 8 20 8"></polyline>
-                <line x1="16" y1="13" x2="8" y2="13"></line>
-                <line x1="16" y1="17" x2="8" y2="17"></line>
-                <polyline points="10 9 9 9 8 9"></polyline>
-                </svg>
-            </button>
-            <button class="copy-button" title="Copy prompt" onclick="copyPrompt(this, '${encodeURIComponent(
-              updatePromptPreview(content.trim())
-            )}')">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
-                <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
-                </svg>
-            </button>
-            </div>
-        </div>
-        <p class="prompt-content">${updatePromptPreview(content)}</p>
-        <a href="https://github.com/${contributor}" class="contributor-badge" target="_blank" rel="noopener">@${contributor}</a>
-        `;
-
-        // Add click event for showing modal
-        card.addEventListener("click", (e) => {
-          if (
-            !e.target.closest(".copy-button") &&
-            !e.target.closest(".contributor-badge") &&
-            !e.target.closest(".yaml-button")
-          ) {
-            showModal(title, content);
-          }
-        });
-
-        const copyButton = card.querySelector(".copy-button");
-        copyButton.addEventListener("click", async (e) => {
-          e.stopPropagation();
-          try {
-            await navigator.clipboard.writeText(updatePromptPreview(content));
-            copyButton.innerHTML = `
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="20 6 9 17 4 12"></polyline>
-            </svg>
-            `;
-            setTimeout(() => {
-              copyButton.innerHTML = `
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                </svg>
-            `;
-            }, 2000);
-          } catch (err) {
-            alert("Failed to copy prompt to clipboard");
-          }
-        });
-
-        promptsGrid.appendChild(card);
       });
-
-      container.innerHTML = "";
-      container.appendChild(promptsGrid);
-
-      // Initialize modal event listeners
-      initializeModalListeners();
-    })
-    .catch((error) => {
-      console.error("Error loading prompts:", error);
-    });
+    }
+  }
 }
 
 function initializeModalListeners() {
@@ -692,77 +523,22 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-function createModal() {
-  const modalHTML = `
-    <div class="modal-overlay" id="modalOverlay">
-    <div class="modal">
-        <div class="modal-header">
-        <h2 class="modal-title"></h2>
-        <div class="modal-actions">
-            <button class="modal-copy-button" title="Copy prompt">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-            </svg>
-            </button>
-            <button class="modal-close" title="Close">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-            </button>
-        </div>
-        </div>
-        <div class="modal-content"></div>
-        <div class="modal-footer">
-        <div class="modal-footer-left">
-            <a class="modal-contributor" target="_blank" rel="noopener"></a>
-        </div>
-        <div class="modal-footer-right">
-            <button class="modal-embed-button" onclick="openEmbedDesigner()">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="4" y="4" width="16" height="16" rx="2"></rect>
-                <rect x="9" y="9" width="6" height="6"></rect>
-                <path d="M15 2v2"></path>
-                <path d="M15 20v2"></path>
-                <path d="M2 15h2"></path>
-                <path d="M20 15h2"></path>
-                <path d="M2 9h2"></path>
-                <path d="M20 9h2"></path>
-                <path d="M9 2v2"></path>
-                <path d="M9 20v2"></path>
-            </svg>
-            Embed
-            </button>
-            <button class="modal-chat-button" onclick="openModalChat()">
-            <svg class="chat-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-            </svg>
-            <svg class="terminal-icon" style="display: none;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="4 17 10 11 4 5"></polyline>
-                <line x1="12" y1="19" x2="20" y2="19"></line>
-            </svg>
-            Start Chat
-            </button>
-        </div>
-        </div>
-    </div>
-    </div>
-`;
-  document.body.insertAdjacentHTML("beforeend", modalHTML);
-  initializeModalListeners();
-}
-
 // Modify the existing showModal function
 function showModal(title, content) {
+  console.log("showModal called with:", { title, content });
+  
   let modalOverlay = document.getElementById("modalOverlay");
   if (!modalOverlay) {
-    createModal();
-    modalOverlay = document.getElementById("modalOverlay");
+    console.log("Modal not found, using template modal");
+    return;
   }
+
+  console.log("Modal overlay:", modalOverlay);
 
   const modalTitle = modalOverlay.querySelector(".modal-title");
   const modalContent = modalOverlay.querySelector(".modal-content");
+
+  console.log("Modal elements:", { modalTitle, modalContent });
 
   // Extract variables from content
   const variables = extractVariables(content);
@@ -796,6 +572,14 @@ function showModal(title, content) {
     modalTitle.textContent = title;
     modalContent.textContent = content;
   }
+
+  // Show the modal
+  modalOverlay.style.display = "flex";
+  document.body.style.overflow = "hidden";
+  
+  console.log("Modal should now be visible");
+  console.log("Modal display style:", modalOverlay.style.display);
+  console.log("Modal computed style:", window.getComputedStyle(modalOverlay).display);
 
   const modalCopyButton = modalOverlay.querySelector(".modal-copy-button");
   const modalContributor = modalOverlay.querySelector(".modal-contributor");
@@ -878,8 +662,8 @@ function showModal(title, content) {
     }
   });
 
-  modalOverlay.style.display = "block";
-  document.body.style.overflow = "hidden";
+  // modalOverlay.style.display = "block"; // This line is now handled by the new_code
+  // document.body.style.overflow = "hidden"; // This line is now handled by the new_code
 }
 
 function hideModal() {
@@ -888,9 +672,12 @@ function hideModal() {
 
   modalOverlay.style.display = "none";
   document.body.style.overflow = "";
-
-  // Optional: Remove modal from DOM when hidden
-  modalOverlay.remove();
+  
+  // Clear modal content for next use
+  const modalTitle = modalOverlay.querySelector(".modal-title");
+  const modalContent = modalOverlay.querySelector(".modal-content");
+  if (modalTitle) modalTitle.textContent = "";
+  if (modalContent) modalContent.innerHTML = "";
 }
 
 let selectedPlatform =
@@ -1060,25 +847,31 @@ function openModalChat() {
   }
 }
 
-// Function to handle embed button click in modal
-function openEmbedDesigner() {
+// Function to copy prompt from modal
+function copyModalPrompt() {
   const modalContent = document.querySelector(".modal-content");
   if (modalContent) {
-    let content = modalContent.textContent || modalContent.innerText;
-    
-    // If there's a variable form, get the processed content with variables
-    const form = document.querySelector(".variable-form");
-    if (form) {
-      content = buildPrompt(encodeURIComponent(content.trim()));
-      // Remove the added language/tone preferences for embed
-      content = content.replace(/\s*Reply in .+ using .+ tone for .+\.$/, '').trim();
+    const content = modalContent.textContent || modalContent.innerText;
+    if (content) {
+      navigator.clipboard.writeText(content).then(() => {
+        // Show success feedback
+        const copyButton = document.querySelector(".modal-copy-button");
+        if (copyButton) {
+          const originalHTML = copyButton.innerHTML;
+          copyButton.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+          `;
+          setTimeout(() => {
+            copyButton.innerHTML = originalHTML;
+          }, 2000);
+        }
+      }).catch(err => {
+        console.error('Failed to copy: ', err);
+        alert("Failed to copy prompt to clipboard");
+      });
     }
-    
-    // Build the embed URL
-    const embedUrl = `/embed/?prompt=${encodeURIComponent(content)}&context=https://prompts.chat&model=gpt-4o&agentMode=chat&thinking=false&max=false&height=400`;
-    
-    // Open in new tab
-    window.open(embedUrl, '_blank');
   }
 }
 
@@ -1137,70 +930,6 @@ function updateChatButtonIcons(isDevMode) {
         terminalIcon.style.display = isDevMode ? "block" : "none";
       }
     });
-}
-
-// Language and Tone Selection
-function initializeLanguageAndTone() {
-  const languageSelect = document.getElementById('languageSelect');
-  const customLanguage = document.getElementById('customLanguage');
-  const toneSelect = document.getElementById('toneSelect');
-  const customTone = document.getElementById('customTone');
-
-  // Load saved preferences
-  const savedLanguage = localStorage.getItem('selected-language');
-  const savedCustomLanguage = localStorage.getItem('custom-language');
-  const savedTone = localStorage.getItem('selected-tone');
-  const savedCustomTone = localStorage.getItem('custom-tone');
-
-  if (savedLanguage) {
-    languageSelect.value = savedLanguage;
-    if (savedLanguage === 'custom' && savedCustomLanguage) {
-      customLanguage.value = savedCustomLanguage;
-      customLanguage.style.display = 'inline-block';
-    }
-  }
-
-  if (savedTone) {
-    toneSelect.value = savedTone;
-    if (savedTone === 'custom' && savedCustomTone) {
-      customTone.value = savedCustomTone;
-      customTone.style.display = 'inline-block';
-    }
-  }
-
-  // Language select handler
-  languageSelect.addEventListener('change', (e) => {
-    const isCustom = e.target.value === 'custom';
-    customLanguage.style.display = isCustom ? 'inline-block' : 'none';
-    localStorage.setItem('selected-language', e.target.value);
-    
-    if (!isCustom) {
-      customLanguage.value = '';
-      localStorage.removeItem('custom-language');
-    }
-  });
-
-  // Custom language input handler
-  customLanguage.addEventListener('input', (e) => {
-    localStorage.setItem('custom-language', e.target.value);
-  });
-
-  // Tone select handler
-  toneSelect.addEventListener('change', (e) => {
-    const isCustom = e.target.value === 'custom';
-    customTone.style.display = isCustom ? 'inline-block' : 'none';
-    localStorage.setItem('selected-tone', e.target.value);
-    
-    if (!isCustom) {
-      customTone.value = '';
-      localStorage.removeItem('custom-tone');
-    }
-  });
-
-  // Custom tone input handler
-  customTone.addEventListener('input', (e) => {
-    localStorage.setItem('custom-tone', e.target.value);
-  });
 }
 
 // Function to show a modal with YAML format and GitHub create button

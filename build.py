@@ -24,10 +24,6 @@ def copy_static_files():
     static_files = [
         'style.css',
         'script.js',
-        'embed-style.css',
-        'embed-script.js',
-        'embed-preview-style.css',
-        'embed-preview-script.js',
         'favicon.ico'
     ]
     
@@ -50,110 +46,66 @@ def copy_templates_to_static():
     """Copy and process templates to static HTML files"""
     build_dir = Path('_site')
     
-    # Create main index.html
-    from flask import render_template_string
+    # Create main index.html using our actual templates
     from app import load_prompts, load_vibe_prompts
     
     # Load data
     prompts = load_prompts()
     vibe_prompts = load_vibe_prompts()
     
-    # Read base template
+    # Read our actual templates
     with open('templates/base.html', 'r', encoding='utf-8') as f:
         base_template = f.read()
     
-    # Read index template
     with open('templates/index.html', 'r', encoding='utf-8') as f:
         index_template = f.read()
     
-    # Create main page
-    main_content = f"""
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>Awesome ChatGPT Prompts — awesome AI prompts</title>
-        <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-        <link rel="stylesheet" href="style.css">
-    </head>
-    <body>
-        <div class="layout-wrapper">
-            <header class="site-header">
-                <div class="header-left">
-                    <h1 class="site-title">Awesome ChatGPT Prompts</h1>
-                    <p class="site-slogan">World's First & Most Famous Prompts Directory</p>
-                </div>
-            </header>
-            <div class="content-wrapper">
-                <div class="container-lg markdown-body">
-                    <div class="search-section">
-                        <div class="search-header">
-                            <div class="search-controls">
-                                <div class="search-input-wrapper">
-                                    <input type="text" id="searchInput" placeholder="Search prompts..." class="search-input">
-                                    <div id="searchResults" class="search-results"></div>
-                                </div>
-                                <select id="audienceSelect" class="audience-select">
-                                    <option value="everyone">Everyone</option>
-                                    <option value="developers">Developers</option>
-                                </select>
-                            </div>
-                            <div class="prompt-count" id="promptCount">
-                                <span class="count-label">All Prompts</span>
-                                <span class="count-number">{len(prompts)}</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="prompts-grid">
-                        <div class="prompt-card contribute-card">
-                            <a href="https://github.com/f/awesome-chatgpt-prompts/pulls" target="_blank" style="text-decoration: none; color: inherit; height: 100%; display: flex; flex-direction: column;">
-                                <div class="prompt-title" style="display: flex; align-items: center; gap: 8px;">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <circle cx="12" cy="12" r="10"></circle>
-                                        <line x1="12" y1="8" x2="12" y2="16"></line>
-                                        <line x1="8" y1="12" x2="16" y2="12"></line>
-                                    </svg>
-                                    Add Your Prompt
-                                </div>
-                                <p class="prompt-content" style="flex-grow: 1;">
-                                    Share your creative prompts with the community! Submit a pull request to add your prompts to the collection.
-                                </p>
-                                <span class="contributor-badge">Contribute Now</span>
-                            </a>
-                        </div>
-                        
-                        {''.join([f'''
-                        <div class="prompt-card" {'data-dev="true"' if prompt.get('for_devs') else ''}>
-                            <div class="prompt-title">
-                                {prompt['act']}
-                                <div class="action-buttons">
-                                    <button class="copy-button" title="Copy prompt" onclick="copyPrompt(this, '{prompt['prompt'].replace("'", "\\'").replace("\n", "\\n")}')">
-                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                                        </svg>
-                                    </button>
-                                </div>
-                            </div>
-                            <p class="prompt-content">{prompt['prompt'][:200]}{'...' if len(prompt['prompt']) > 200 else ''}</p>
-                            <a href="https://github.com/f" class="contributor-badge" target="_blank" rel="noopener">@f</a>
-                        </div>
-                        ''' for prompt in prompts])}
-                    </div>
-                </div>
-            </div>
-        </div>
-        <script src="script.js"></script>
-    </body>
-    </html>
-    """
+    # Simple template processing - replace placeholders
+    def process_template(template_content, **replacements):
+        """Simple template processor that replaces {{ variable }} with values"""
+        result = template_content
+        for key, value in replacements.items():
+            placeholder = f"{{{{ {key} }}}}"
+            result = result.replace(placeholder, str(value))
+        return result
+    
+    # Process the index template first
+    index_content = process_template(
+        index_template,
+        title="Awesome ChatGPT Prompts",
+        subtitle="World's First & Most Famous Prompts Directory",
+        body_class=""
+    )
+    
+    # Process the base template with the index content
+    main_content = process_template(
+        base_template,
+        title="Awesome ChatGPT Prompts",
+        subtitle="World's First & Most Famous Prompts Directory", 
+        body_class="",
+        content=index_content
+    )
     
     with open(build_dir / 'index.html', 'w', encoding='utf-8') as f:
         f.write(main_content)
     
-    print("✓ Generated index.html")
+    print("✓ Generated index.html from templates")
+    
+    # Also create admin.html
+    with open('templates/admin.html', 'r', encoding='utf-8') as f:
+        admin_template = f.read()
+    
+    admin_content = process_template(
+        admin_template,
+        title="Admin - Add Prompts",
+        subtitle="Add new prompts to the collection",
+        body_class=""
+    )
+    
+    with open(build_dir / 'admin.html', 'w', encoding='utf-8') as f:
+        f.write(admin_content)
+    
+    print("✓ Generated admin.html from templates")
 
 def build_site():
     """Build the static site"""
