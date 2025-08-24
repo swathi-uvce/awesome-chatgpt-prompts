@@ -148,12 +148,15 @@ def _simple_template_fallback(build_dir, prompts):
     
     # Add prompt cards
     for prompt in prompts[:50]:  # Limit to first 50 prompts for simplicity
-        escaped_prompt = prompt.get('prompt', '').replace('"', '&quot;').replace("'", "\\'").replace('\n', '\\n')[:200]
+        import html
+        prompt_text = prompt.get('prompt', '')[:200]
+        escaped_prompt_html = html.escape(prompt_text)
+        escaped_prompt_attr = html.escape(prompt_text, quote=True)
         html_content += f"""
                     <div class="prompt-card">
-                        <div class="prompt-title">{prompt.get('act', 'Prompt')}</div>
-                        <p class="prompt-content">{escaped_prompt}...</p>
-                        <button class="copy-button" onclick="navigator.clipboard.writeText('{escaped_prompt}')">Copy</button>
+                        <div class="prompt-title">{html.escape(prompt.get('act', 'Prompt'))}</div>
+                        <p class="prompt-content">{escaped_prompt_html}...</p>
+                        <button class="copy-button" data-prompt="{escaped_prompt_attr}">Copy</button>
                     </div>"""
     
     html_content += """
