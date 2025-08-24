@@ -20,17 +20,40 @@ def copy_static_files():
     """Copy static files to build directory"""
     build_dir = Path('_site')
     
-    # Files to copy
-    static_files = [
+    # Files to copy from root directory
+    root_files = [
         'style.css',
         'script.js',
         'favicon.ico'
     ]
     
-    for file_path in static_files:
+    for file_path in root_files:
         if Path(file_path).exists():
             shutil.copy2(file_path, build_dir)
             print(f"✓ Copied {file_path}")
+    
+    # Copy static directory if it exists
+    static_dir = Path('static')
+    if static_dir.exists():
+        for static_file in static_dir.rglob('*'):
+            if static_file.is_file():
+                # Copy to build directory with same filename (not nested)
+                dest_path = build_dir / static_file.name
+                shutil.copy2(static_file, dest_path)
+                print(f"✓ Copied static/{static_file.name}")
+    
+    # Ensure critical files exist or create minimal versions
+    critical_files = {
+        'style.css': '/* Awesome ChatGPT Prompts Styles */\nbody { font-family: system-ui; }',
+        'script.js': '// Awesome ChatGPT Prompts JavaScript\nconsole.log("Prompts loaded");'
+    }
+    
+    for filename, content in critical_files.items():
+        file_path = build_dir / filename
+        if not file_path.exists():
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(content)
+            print(f"✓ Created minimal {filename}")
 
 def copy_csv_files():
     """Copy CSV data files to build directory"""
@@ -176,6 +199,70 @@ def add_nojekyll_file():
         f.write('')
     print("✓ Added .nojekyll file for GitHub Pages")
 
+def add_cname_file():
+    """Add CNAME file if custom domain is configured"""
+    build_dir = Path('_site')
+    
+    # Check if CNAME file exists in root
+    root_cname = Path('CNAME')
+    if root_cname.exists():
+        shutil.copy2(root_cname, build_dir)
+        print("✓ Copied CNAME file for custom domain")
+    else:
+        # Create CNAME for prompts.chat domain
+        with open(build_dir / 'CNAME', 'w') as f:
+            f.write('prompts.chat\n')
+        print("✓ Created CNAME file for prompts.chat domain")
+
+def add_seo_files():
+    """Add SEO and meta files"""
+    build_dir = Path('_site')
+    
+    # Add robots.txt
+    robots_content = """User-agent: *
+Allow: /
+
+Sitemap: https://prompts.chat/sitemap.xml
+"""
+    with open(build_dir / 'robots.txt', 'w') as f:
+        f.write(robots_content)
+    print("✓ Added robots.txt for SEO")
+    
+    # Add basic sitemap.xml
+    sitemap_content = """<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://prompts.chat/</loc>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>
+"""
+    with open(build_dir / 'sitemap.xml', 'w') as f:
+        f.write(sitemap_content)
+    print("✓ Added sitemap.xml for SEO")
+    
+    # Add manifest.json for PWA
+    manifest_content = """{
+  "name": "Awesome ChatGPT Prompts",
+  "short_name": "ChatGPT Prompts",
+  "description": "World's First & Most Famous Prompts Directory",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#000000",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "any",
+      "type": "image/x-icon"
+    }
+  ]
+}"""
+    with open(build_dir / 'manifest.json', 'w') as f:
+        f.write(manifest_content)
+    print("✓ Added manifest.json for PWA support")
+
 def build_site():
     """Build the static site"""
     print("🚀 Building static site...")
@@ -199,6 +286,12 @@ def build_site():
     
     # Add .nojekyll file for GitHub Pages compatibility
     add_nojekyll_file()
+    
+    # Add CNAME file for custom domain support
+    add_cname_file()
+    
+    # Add SEO files
+    add_seo_files()
     
     print("✅ Static site built successfully!")
     print(f"📁 Output directory: {Path('_site').absolute()}")
