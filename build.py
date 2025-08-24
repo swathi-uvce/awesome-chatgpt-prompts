@@ -43,69 +43,134 @@ def copy_csv_files():
             print(f"✓ Copied {csv_file}")
 
 def copy_templates_to_static():
-    """Copy and process templates to static HTML files"""
+    """Copy and process templates to static HTML files using Flask's template engine"""
     build_dir = Path('_site')
     
-    # Create main index.html using our actual templates
-    from app import load_prompts, load_vibe_prompts
+    # Import Flask app components
+    from app import app, load_prompts, load_vibe_prompts
     
     # Load data
     prompts = load_prompts()
     vibe_prompts = load_vibe_prompts()
     
-    # Read our actual templates
-    with open('templates/base.html', 'r', encoding='utf-8') as f:
-        base_template = f.read()
+    # Use Flask's template engine to render templates properly
+    with app.app_context():
+        try:
+            # Create a mock request context for url_for to work
+            with app.test_request_context():
+                # Import render_template_string after setting up context
+                from flask import render_template
+                
+                # Render index.html with data
+                index_html = render_template('index.html', 
+                                           prompts=prompts,
+                                           total_prompts=len(prompts))
+                
+                # Post-process to fix static file URLs for GitHub Pages
+                import re
+                # Replace Flask url_for static calls with relative paths
+                index_html = re.sub(r'/static/([^"\']+)', r'\1', index_html)
+                
+                with open(build_dir / 'index.html', 'w', encoding='utf-8') as f:
+                    f.write(index_html)
+                
+                print("✓ Generated index.html from templates")
+                
+                # Generate admin.html if it exists
+                try:
+                    admin_html = render_template('admin.html')
+                    # Post-process to fix static file URLs
+                    admin_html = re.sub(r'/static/([^"\']+)', r'\1', admin_html)
+                    
+                    with open(build_dir / 'admin.html', 'w', encoding='utf-8') as f:
+                        f.write(admin_html)
+                    
+                    print("✓ Generated admin.html from templates")
+                except Exception as e:
+                    print(f"⚠️ Could not generate admin.html: {e}")
+                    
+        except Exception as e:
+            print(f"❌ Template rendering failed: {e}")
+            # Fallback to simple template processing
+            print("🔄 Falling back to simple template processing...")
+            _simple_template_fallback(build_dir, prompts)
+
+def _simple_template_fallback(build_dir, prompts):
+    """Simple fallback template processing when Flask rendering fails"""
+    # Create a basic HTML page with the prompts data
+    html_content = f"""<!DOCTYPE html>
+<html lang="en-US">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Awesome ChatGPT Prompts — awesome AI prompts</title>
+    <meta name="description" content="World's First & Most Famous Prompts Directory">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="layout-wrapper">
+        <header class="site-header">
+            <div class="header-left">
+                <h1 class="site-title">Awesome ChatGPT Prompts</h1>
+                <p class="site-slogan">World's First & Most Famous Prompts Directory</p>
+            </div>
+        </header>
+        <div class="content-wrapper">
+            <div class="container-lg markdown-body">
+                <div class="search-section">
+                    <div class="search-header">
+                        <div class="search-controls">
+                            <div class="search-input-wrapper">
+                                <input type="text" id="searchInput" placeholder="Search prompts..." class="search-input">
+                                <div id="searchResults" class="search-results"></div>
+                            </div>
+                        </div>
+                        <div class="prompt-count" id="promptCount">
+                            <span class="count-label">All Prompts</span>
+                            <span class="count-number">{len(prompts)}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="prompts-grid">
+                    <!-- Contribute Card -->
+                    <div class="prompt-card contribute-card">
+                        <a href="https://github.com/swathi-uvce/awesome-chatgpt-prompts/pulls" target="_blank" style="text-decoration: none; color: inherit; height: 100%; display: flex; flex-direction: column;">
+                            <div class="prompt-title" style="display: flex; align-items: center; gap: 8px;">Add Your Prompt</div>
+                            <p class="prompt-content" style="flex-grow: 1;">Share your creative prompts with the community! Submit a pull request to add your prompts to the collection.</p>
+                            <span class="contributor-badge">Contribute Now</span>
+                        </a>
+                    </div>"""
     
-    with open('templates/index.html', 'r', encoding='utf-8') as f:
-        index_template = f.read()
+    # Add prompt cards
+    for prompt in prompts[:50]:  # Limit to first 50 prompts for simplicity
+        escaped_prompt = prompt.get('prompt', '').replace('"', '&quot;').replace("'", "\\'").replace('\n', '\\n')[:200]
+        html_content += f"""
+                    <div class="prompt-card">
+                        <div class="prompt-title">{prompt.get('act', 'Prompt')}</div>
+                        <p class="prompt-content">{escaped_prompt}...</p>
+                        <button class="copy-button" onclick="navigator.clipboard.writeText('{escaped_prompt}')">Copy</button>
+                    </div>"""
     
-    # Simple template processing - replace placeholders
-    def process_template(template_content, **replacements):
-        """Simple template processor that replaces {{ variable }} with values"""
-        result = template_content
-        for key, value in replacements.items():
-            placeholder = f"{{{{ {key} }}}}"
-            result = result.replace(placeholder, str(value))
-        return result
-    
-    # Process the index template first
-    index_content = process_template(
-        index_template,
-        title="Awesome ChatGPT Prompts",
-        subtitle="World's First & Most Famous Prompts Directory",
-        body_class=""
-    )
-    
-    # Process the base template with the index content
-    main_content = process_template(
-        base_template,
-        title="Awesome ChatGPT Prompts",
-        subtitle="World's First & Most Famous Prompts Directory", 
-        body_class="",
-        content=index_content
-    )
+    html_content += """
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>"""
     
     with open(build_dir / 'index.html', 'w', encoding='utf-8') as f:
-        f.write(main_content)
-    
-    print("✓ Generated index.html from templates")
-    
-    # Also create admin.html
-    with open('templates/admin.html', 'r', encoding='utf-8') as f:
-        admin_template = f.read()
-    
-    admin_content = process_template(
-        admin_template,
-        title="Admin - Add Prompts",
-        subtitle="Add new prompts to the collection",
-        body_class=""
-    )
-    
-    with open(build_dir / 'admin.html', 'w', encoding='utf-8') as f:
-        f.write(admin_content)
-    
-    print("✓ Generated admin.html from templates")
+        f.write(html_content)
+    print("✓ Generated index.html with fallback method")
+
+def add_nojekyll_file():
+    """Add .nojekyll file for GitHub Pages compatibility"""
+    build_dir = Path('_site')
+    with open(build_dir / '.nojekyll', 'w') as f:
+        f.write('')
+    print("✓ Added .nojekyll file for GitHub Pages")
 
 def build_site():
     """Build the static site"""
@@ -127,6 +192,9 @@ def build_site():
     # Copy additional static files
     copy_static_files()
     copy_csv_files()
+    
+    # Add .nojekyll file for GitHub Pages compatibility
+    add_nojekyll_file()
     
     print("✅ Static site built successfully!")
     print(f"📁 Output directory: {Path('_site').absolute()}")
