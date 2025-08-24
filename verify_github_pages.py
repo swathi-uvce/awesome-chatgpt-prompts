@@ -108,9 +108,12 @@ def test_local_serving():
                 print(f"   ❌ Server returned status: {response.status_code}")
                 success = False
         except requests.RequestException as e:
-            print(f"   ❌ Request failed: {e}")
+            print(f"   ❌ Request failed: {type(e).__name__}: {e}")
             print("   💡 This might be expected in CI environments")
-            success = True  # Don't fail the whole test for network issues
+            if treat_network_failures_as_error:
+                success = False
+            else:
+                success = True  # Don't fail the whole test for network issues
         
         # Stop server
         process.terminate()
