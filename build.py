@@ -63,6 +63,8 @@ def copy_templates_to_static():
                 
                 # Render index.html with data
                 index_html = render_template('index.html', 
+                                           title="Awesome ChatGPT Prompts",
+                                           subtitle="World's First & Most Famous Prompts Directory",
                                            prompts=prompts,
                                            total_prompts=len(prompts))
                 
@@ -78,7 +80,9 @@ def copy_templates_to_static():
                 
                 # Generate admin.html if it exists
                 try:
-                    admin_html = render_template('admin.html')
+                    admin_html = render_template('admin.html',
+                                               title="Admin - Add Prompts",
+                                               subtitle="Add new prompts to the collection")
                     # Post-process to fix static file URLs
                     admin_html = re.sub(r'/static/([^"\']+)', r'\1', admin_html)
                     
